@@ -1,10 +1,12 @@
-import { IsNumber, IsString, Length } from 'class-validator';
+import { IsNumber, IsString, Length, Max, Min } from 'class-validator';
 
 export class ConvertCurrencyDto {
   @IsNumber(
     { allowNaN: false, allowInfinity: false, maxDecimalPlaces: 15 },
     { message: 'Must be a valid number with 15 maximum decimal places' },
   )
+  @Min(0, { message: 'Must be a positive number' })
+  @Max(9_999_999_999_999, { message: 'Must be less than 10 trillion' })
   amount: number;
 
   @IsString({

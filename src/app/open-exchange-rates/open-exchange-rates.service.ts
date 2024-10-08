@@ -76,7 +76,7 @@ export class OpenExchangeRatesService {
     baseCurrency: string,
     rates: Rates,
     timestamp: number,
-  ) {
+  ): Promise<void> {
     const ttl = calculateTTL(timestamp);
     for (const rate of Object.keys(rates)) {
       const cacheKey = `${baseCurrency}/${rate}`;

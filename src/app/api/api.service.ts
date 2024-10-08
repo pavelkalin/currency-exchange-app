@@ -7,12 +7,15 @@ export class ApiService {
     private readonly openExchangeRatesService: OpenExchangeRatesService,
   ) {}
 
-  async convert({ baseCurrency, targetCurrency, amount }): Promise<number> {
+  async convert({ baseCurrency, targetCurrency, amount }): Promise<any> {
     const conversionRate =
       await this.openExchangeRatesService.getCurrencyConversionRate({
         baseCurrency,
         targetCurrency,
       });
-    return Math.floor(conversionRate * amount * 100) / 100;
+    return {
+      amount: Math.floor(conversionRate * amount * 100) / 100,
+      conversionRate,
+    };
   }
 }
