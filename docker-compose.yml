@@ -1,4 +1,16 @@
 services:
+  backend:
+    build: .
+    ports:
+      - '3000:3000'
+    depends_on:
+      - redis
+    environment:
+      - OPEN_EXCHANGE_API_KEY=XXX
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - app-network
   redis:
     container_name: cache
     image: redis
@@ -6,7 +18,19 @@ services:
       - 6379:6379
     volumes:
       - redis:/data
-
+    networks:
+      - app-network
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - 8080:8080
+    networks:
+      - app-network
 volumes:
   redis:
     driver: local
+networks:
+  app-network:
+    driver: bridge

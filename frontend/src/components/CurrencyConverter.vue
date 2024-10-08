@@ -2,6 +2,8 @@
 import { onMounted, reactive } from 'vue';
 import axios from 'axios';
 
+const BASE_URL = 'http://localhost:3000';
+
 const state = reactive({
   currencies: [
     { label: 'USD', value: 'USD' },
@@ -34,7 +36,7 @@ const onCurrencyChange = async () => {
 const convertCurrencies = async () => {
   try {
     state.isConversionLoading = true;
-    const response = await axios.post(`/api/convert`, {
+    const response = await axios.post(`${BASE_URL}/api/convert`, {
       baseCurrency: state.selectedFromCurrency,
       targetCurrency: state.selectedToCurrency,
       amount: state.amount,
@@ -50,7 +52,7 @@ const convertCurrencies = async () => {
 
 onMounted(async () => {
   try {
-    const response = await axios.get(`/api/currencies`);
+    const response = await axios.get(`${BASE_URL}/api/currencies`);
     state.currencies = response.data.map((el) => ({ label: el, value: el }));
     await convertCurrencies();
   } catch (error) {
