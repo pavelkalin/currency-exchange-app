@@ -7,10 +7,14 @@ import {
 import { HttpService } from '@nestjs/axios';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
-import { CURRENCIES, OPEN_EXCHANGE_CONTEXT } from '../common/constants';
+import {
+  CURRENCIES,
+  CURRENCIES_MAP,
+  OPEN_EXCHANGE_CONTEXT,
+} from '../common/constants';
 import { ConversionRateDto } from '../api/dto/conversion-rate-dto';
-import { Timestamp } from 'rxjs';
 import { ExchangeData, Rates } from './interface/exchange-data.interface';
+import { calculateTTL } from './helpers/TtlToNextHour';
 
 /**
  * Service class for interacting with the Open Exchange Rates API.
@@ -49,6 +53,7 @@ export class OpenExchangeRatesService {
       });
       const currenciesArray = Object.keys(data);
       await this.cacheService.set(CURRENCIES, currenciesArray);
+      await this.cacheService.set(CURRENCIES_MAP, data);
       return data;
     } catch (err) {
       throw new BadRequestException('Open Exchange API error', {
@@ -58,30 +63,59 @@ export class OpenExchangeRatesService {
     }
   }
 
+  /**
+   * Process the rates data for a specific base currency and stores it in cache with a given time-to-live (TTL).
+   *
+   * @param {string} baseCurrency - The base currency for which rates are being processed.
+   * @param {Object} rates - The rates data to be processed and stored.
+   * @param {number} timestamp - The timestamp indicating when the rates data was generated.
+   *
+   * @return {Promise<void>} - A promise that resolves once the processing and caching of rates data is completed.
+   */
   private async processRatesData(
     baseCurrency: string,
     rates: Rates,
     timestamp: number,
   ) {
-    const TTL = 10;
-    console.log(timestamp);
+    const ttl = calculateTTL(timestamp);
     for (const rate of Object.keys(rates)) {
       const cacheKey = `${baseCurrency}/${rate}`;
-      await this.cacheService.set(cacheKey, rates[rate], TTL);
+      Logger.log(`Setting ${cacheKey} to ${rates[rate]} for ${ttl} seconds`);
+      await this.cacheService.set(cacheKey, rates[rate], ttl);
     }
   }
 
+  /**
+   * Retrieve the currency conversion rate between a base currency and a target currency.
+   *
+   * @param {ConversionRateDto} params - The parameters for the conversion rate request.
+   * @param {string} params.baseCurrency - The base currency code (default is 'USD').
+   * @param {string} params.targetCurrency - The target currency code to convert to.
+   * @return {Promise<number>} - A Promise that resolves to the conversion rate between the base and target currencies.
+   *
+   * @throws {BadRequestException} - If there is an issue with the provided currencies or if the Open Exchange API call fails.
+   */
   async getCurrencyConversionRate({
     baseCurrency = 'USD',
     targetCurrency,
   }: ConversionRateDto): Promise<any> {
     const cacheKey = `${baseCurrency}/${targetCurrency}`;
-    console.log(targetCurrency);
-    console.log(cacheKey);
     const cachedCurrencyRates = await this.cacheService.get(cacheKey);
     if (cachedCurrencyRates) {
       Logger.log(`Getting currency rates from cache`, OPEN_EXCHANGE_CONTEXT);
       return cachedCurrencyRates;
+    }
+
+    const availableTargetCurrenciesMap =
+      await this.cacheService.get(CURRENCIES_MAP);
+    if (
+      !availableTargetCurrenciesMap[targetCurrency] ||
+      !availableTargetCurrenciesMap[baseCurrency]
+    ) {
+      throw new BadRequestException('Wrong currency', {
+        cause: new Error(),
+        description: `Missing info about either currency ${baseCurrency} or currency ${targetCurrency}`,
+      });
     }
     try {
       const url = `https://openexchangerates.org/api/latest.json?app_id=${process.env.OPEN_EXCHANGE_API_KEY}&base=${baseCurrency}&prettyprint=false&show_alternative=false`;
@@ -91,11 +125,7 @@ export class OpenExchangeRatesService {
         data: ExchangeData;
       };
       await this.processRatesData(base, rates, timestamp);
-      const cachedCurrencyRates = await this.cacheService.get(cacheKey);
-      if (cachedCurrencyRates) {
-        Logger.log(`Getting currency rates from cache`, OPEN_EXCHANGE_CONTEXT);
-        return cachedCurrencyRates;
-      }
+      return rates[targetCurrency] ?? 0;
     } catch (err) {
       throw new BadRequestException('Open Exchange API error', {
         cause: new Error(),

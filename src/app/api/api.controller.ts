@@ -10,25 +10,15 @@ export class ApiController {
     private readonly openExchangeRatesService: OpenExchangeRatesService,
   ) {}
 
-  @Get()
-  getHello(): string {
-    return this.apiService.getHello();
-  }
-
   @Get('currencies')
   async getListOfCurrencies(): Promise<any> {
     return this.openExchangeRatesService.getListOfCurrencies();
   }
 
-  @Get('currencies-convert/:id')
-  async getCurrencyConversionRate(@Param() params: any): Promise<any> {
-    return this.openExchangeRatesService.getCurrencyConversionRate({
-      targetCurrency: params.id,
-    });
-  }
-
   @Post('convert')
-  convert(@Body() convertCurrencyDto: ConvertCurrencyDto): string {
-    return this.apiService.getHello();
+  async convert(
+    @Body() convertCurrencyDto: ConvertCurrencyDto,
+  ): Promise<number> {
+    return this.apiService.convert(convertCurrencyDto);
   }
 }
