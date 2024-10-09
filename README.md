@@ -1,7 +1,5 @@
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
 Full-stack currency exchange application that allows users to convert amounts between
 different currencies. The application includes both frontend and backend components, with a
 focus on implementing caching for performance optimization.
