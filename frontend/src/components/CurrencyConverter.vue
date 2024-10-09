@@ -45,6 +45,8 @@ const convertCurrencies = async () => {
     state.rate = response.data.conversionRate;
   } catch (error) {
     console.error('Error fetching job', error);
+    state.amount = 0;
+    state.conversionResult = 0;
   } finally {
     state.isConversionLoading = false;
   }
